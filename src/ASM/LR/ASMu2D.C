@@ -864,10 +864,10 @@ size_t ASMu2D::getNoBoundaryElms (char lIndex, char ldim) const
   LR::parameterEdge edge;
   switch(lIndex)
   {
-  case 1: edge = LR::WEST;
-  case 2: edge = LR::EAST;
-  case 3: edge = LR::SOUTH;
-  case 4: edge = LR::NORTH;
+  case 1: edge = LR::WEST;  break;
+  case 2: edge = LR::EAST;  break;
+  case 3: edge = LR::SOUTH; break;
+  case 4: edge = LR::NORTH; break;
   default:edge = LR::NONE;
   }
 
