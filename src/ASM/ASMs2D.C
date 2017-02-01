@@ -702,78 +702,125 @@ void ASMs2D::constrainEdge (int dir, bool open, int dof, int code, char basis)
   if (swapV) // Account for swapped parameter direction
     if (dir == 2 || dir == -2) dir = -dir;
 
-  int bcode = code;
-  if (code > 0) // Dirichlet projection will be performed
-    dirich.push_back(DirichletEdge(this->getBoundary(dir,basis),dof,code));
-  else if (code < 0)
-    bcode = -code;
-
-  int i1 = 2;
-  int i2 = 2;
+  int i1 = 1;
+  int i2 = 1;
   int i1e = n1;
   int i2e = n2;
-  int order[2];
-  this->getOrder(order[0], order[1]);
+  Go::BsplineBasis bu = this->getBasis(basis)->basis_u();
+  Go::BsplineBasis bv = this->getBasis(basis)->basis_v();
+  std::vector<double>::const_iterator knot_u = bu.begin();
+  std::vector<double>::const_iterator knot_v = bv.begin();
+  int p1 = bu.order();
+  int p2 = bv.order();
+  std::vector<Ipair>  nodes;
+  std::vector<double> knot;
+
+
   int fmult, lmult; // multiplicities for first, last knot
   switch (dir)
     {
     case  1: // Right edge (positive I-direction)
       node += n1-1;
     case -1: // Left edge (negative I-direction)
-      if (!open) {
-        fmult = this->getBasis(basis)->basis_v().endMultiplicity(true);
-        lmult = this->getBasis(basis)->basis_v().endMultiplicity(false);
-        if (fmult == order[1]) {
-          this->prescribe(node,dof,bcode);
-          node += n1;
-        } else
-          i2 = 1;
-        if (lmult != order[1])
-          i2e = n2+1;
-      } else
-        node += n1;
-      for ( ; i2 < i2e; i2++, node += n1)
+      if (code > 0)
       {
-	// If the Dirichlet condition is to be projected, add this node to
-	// the set of nodes to receive prescribed value from the projection
-	// **unless this node already has a homogeneous constraint**
-	if (this->prescribe(node,dof,-code) == 0 && code > 0)
-	  dirich.back().nodes.push_back(std::make_pair(i2,node));
+        knot.resize(n2+p2);
+        std::copy(knot_v, knot_v+p2+n2, knot.begin());
+        fmult = bv.endMultiplicity(true);
+        lmult = bv.endMultiplicity(false);
+        while (fmult < p2)
+        {
+          knot.insert(knot.begin(),knot[0]);
+          fmult++;
+          i2++;
+          i2e++;
+        }
+        while (lmult < p2)
+        {
+          knot.push_back(knot.back());
+          lmult++;
+        }
       }
-      if (!open)
-        if (lmult == order[1])
-          this->prescribe(node,dof,bcode);
+      if (open) {
+        node+=n1;
+        i2++;
+        i2e--;
+      }
+      for (int i=i2 ; i <= i2e; i++, node += n1)
+      {
+        // If the Dirichlet condition is to be projected, add this node to
+        // the set of nodes to receive prescribed value from the projection
+        // **unless this node already has a homogeneous constraint**
+        if (this->prescribe(node,dof,-code) == 0 && code > 0)
+          nodes.push_back(std::make_pair(i,node));
+      }
       break;
 
     case  2: // Back edge (positive J-direction)
       node += n1*(n2-1);
     case -2: // Front edge (negative J-direction)
-      if (!open) {
-        fmult = this->getBasis(basis)->basis_u().endMultiplicity(true);
-        lmult = this->getBasis(basis)->basis_u().endMultiplicity(false);
-        if (fmult == order[0]) {
-          this->prescribe(node,dof,bcode);
-          node++;
-        } else
-          i1 = 1;
-        if (lmult != order[0])
-          i1e = n1+1;
-      } else
-        node++;
-
-      for (; i1 < i1e; i1++, node++)
+      if (code > 0)
       {
-	// If the Dirichlet condition is to be projected, add this node to
-	// the set of nodes to receive prescribed value from the projection
-	// **unless this node already has a homogeneous constraint**
-	if (this->prescribe(node,dof,-code) == 0 && code > 0)
-	  dirich.back().nodes.push_back(std::make_pair(i1,node));
+        knot.resize(n1+p1);
+        std::copy(knot_u, knot_u+p1+n1, knot.begin());
+        fmult = bu.endMultiplicity(true);
+        lmult = bu.endMultiplicity(false);
+        while (fmult < p1)
+        {
+          knot.insert(knot.begin(),knot[0]);
+          fmult++;
+          i1++;
+          i1e++;
+        }
+        std::cout << "Curve before inserting\n " ; for(auto d : knot) std::cout << d << " "; std::cout << std::endl;
+        while (lmult < p1)
+        {
+          knot.push_back(knot.back());
+          lmult++;
+        }
+        std::cout << "Curve after inserting\n " ; for(auto d : knot) std::cout << d << " "; std::cout << std::endl;
       }
-      if (!open)
-        if (lmult == order[0])
-          this->prescribe(node,dof,bcode);
+      if (open) {
+        i1++;
+        i1e--;
+        node++;
+      }
+      for (int i=i1; i <= i1e; i++, node++)
+      {
+        // If the Dirichlet condition is to be projected, add this node to
+        // the set of nodes to receive prescribed value from the projection
+        // **unless this node already has a homogeneous constraint**
+        if (this->prescribe(node,dof,-code) == 0 && code > 0)
+          nodes.push_back(std::make_pair(i,node));
+      }
       break;
     }
+    
+    if (code > 0)
+    {
+      Go::SplineCurve* crv = this->getBoundary(dir);
+      std::cout << "Curve:\n" << *crv << std::endl;
+      bool rat = crv->rational();
+      int dim  = crv->dimension();
+      int p  = (abs(dir)==1) ? p2  : p1;
+      int i  = (abs(dir)==1) ? i2  : i1;
+      int n  = knot.size() - p;
+      double controlpoints[n*(dim+rat)];
+      std::cout << "i = "<<  i << "\nn = " << n << "\np = " << p << "\ndim = " << dim << "\nrat = " << rat << "\n";
+      if(rat)
+        std::copy(crv->rcoefs_begin(), crv->rcoefs_end(), controlpoints + (i-1)*(dim+rat));
+      else
+        std::copy(crv->coefs_begin(),  crv->coefs_end(),  controlpoints + (i-1)*(dim+rat));
+
+      std::cout << "Creating curve with following knots\n " ; for(auto d : knot) std::cout << d << " "; std::cout << std::endl;
+      std::cout << "i = " << i << "\nn = " << n << "\np = " << p << "\ndim = " << dim << "\nrat = " << rat << "\n";
+      Go::SplineCurve *interp_curve = new Go::SplineCurve(n, p, knot.begin(), controlpoints, dim, rat);
+
+      dirich.push_back(DirichletEdge(interp_curve,dof,code));
+      dirich.back().nodes = nodes;
+    }
+    if (code > 0)
+      std::cout << *(dirich.back().curve) << std::endl;
 
   if (code > 0)
     if (dirich.back().nodes.empty())
@@ -783,11 +830,11 @@ void ASMs2D::constrainEdge (int dir, bool open, int dof, int code, char basis)
     {
       std::cout <<"Non-corner boundary nodes:";
       for (size_t i = 0; i < dirich.back().nodes.size(); i++)
-	std::cout <<" ("<< dirich.back().nodes[i].first
-		  <<","<< dirich.back().nodes[i].second
-		  <<")";
+        std::cout <<" ("<< dirich.back().nodes[i].first
+                  <<","<< dirich.back().nodes[i].second
+                  <<")";
       std::cout <<"\nThese nodes will be subjected to Dirichlet projection"
-		<< std::endl;
+                << std::endl;
     }
 #endif
 }
@@ -885,6 +932,7 @@ size_t ASMs2D::constrainEdgeLocal (int dir, bool open, int dof, int code,
     if (edge->rational())
       edge->getWeights(weights);
 
+    std::cout << "Look at meeeeeee. I'm using regular interpolation\n";;
     locc = Go::CurveInterpolator::regularInterpolation(edge->basis(),
                                                        gpar,gdata,6,
                                                        edge->rational(),
