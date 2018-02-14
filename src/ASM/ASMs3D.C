@@ -685,6 +685,9 @@ bool ASMs3D::connectBasis (int face, ASMs3D& neighbor, int nface, int norient,
     return false;
   }
 
+  if (norient > 3)
+    std::swap(n1,n2);
+
   const double xtol = 1.0e-4;
   int node = 1;
   for (int j = 0; j < n2; j++)
@@ -705,7 +708,7 @@ bool ASMs3D::connectBasis (int face, ASMs3D& neighbor, int nface, int norient,
 
       for (int t = 0; t < thick; t++)
       {
-        int slave = slaveNodes[(l*n1+k)*thick+t];
+        int slave = slaveNodes[(l*m1+k)*thick+t];
         int node2 = masterNodes[(node-1)*thick+t];
         if (!coordCheck)
           ASMbase::collapseNodes(neighbor,node2,*this,slave);
