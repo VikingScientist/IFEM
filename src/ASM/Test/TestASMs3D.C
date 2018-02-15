@@ -42,4 +42,28 @@ TEST(TestASMs3D, ConnectUneven)
   SIM3D sim(1);
   ASSERT_TRUE(sim.read("src/ASM/Test/refdata/3d_uneven.xinp"));
   ASSERT_TRUE(sim.createFEMmodel());
+  ASSERT_TRUE(sim.read("src/ASM/Test/refdata/3d_uneven_00.xinp"));
+  ASSERT_TRUE(sim.createFEMmodel());
+  ASSERT_TRUE(sim.read("src/ASM/Test/refdata/3d_uneven_01.xinp"));
+  ASSERT_TRUE(sim.createFEMmodel());
+  ASSERT_TRUE(sim.read("src/ASM/Test/refdata/3d_uneven_02.xinp"));
+  ASSERT_TRUE(sim.createFEMmodel());
+  ASSERT_TRUE(sim.read("src/ASM/Test/refdata/3d_uneven_10.xinp"));
+  ASSERT_TRUE(sim.createFEMmodel());
+  ASSERT_TRUE(sim.read("src/ASM/Test/refdata/3d_uneven_11.xinp"));
+  ASSERT_TRUE(sim.createFEMmodel());
+  ASSERT_TRUE(sim.read("src/ASM/Test/refdata/3d_uneven_12.xinp"));
+  ASSERT_TRUE(sim.createFEMmodel());
+  ASSERT_TRUE(sim.read("src/ASM/Test/refdata/3d_uneven_20.xinp"));
+  ASSERT_TRUE(sim.createFEMmodel());
+  ASSERT_TRUE(sim.read("src/ASM/Test/refdata/3d_uneven_21.xinp"));
+  ASSERT_TRUE(sim.createFEMmodel());
+  ASSERT_TRUE(sim.read("src/ASM/Test/refdata/3d_uneven_22.xinp"));
+  ASSERT_TRUE(sim.createFEMmodel());
+  ASSERT_TRUE(sim.read("src/ASM/Test/refdata/3d_uneven_30.xinp"));
+  ASSERT_TRUE(sim.createFEMmodel());
+  ASSERT_TRUE(sim.read("src/ASM/Test/refdata/3d_uneven_31.xinp"));
+  ASSERT_TRUE(sim.createFEMmodel());
+  ASSERT_TRUE(sim.read("src/ASM/Test/refdata/3d_uneven_32.xinp"));
+  ASSERT_TRUE(sim.createFEMmodel());
 }
