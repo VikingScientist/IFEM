@@ -104,8 +104,8 @@ bool ASMu2D::assembleL2matrices (SparseMatrix& A, StdVector& B,
 {
   size_t nnod = this->getNoProjectionNodes();
 
-  const int p1 = projBasis->order(0);
-  const int p2 = projBasis->order(1);
+  const int p1 = projBasis->min_order(0);
+  const int p2 = projBasis->min_order(1);
   const int pm = p1 > p2 ? p1 : p2;
 
   // Get Gaussian quadrature points
@@ -241,8 +241,8 @@ LR::LRSplineSurface* ASMu2D::scRecovery (const IntegrandBase& integrand) const
   PROFILE2("ASMu2D::scRecovery");
 
   const int m = integrand.derivativeOrder();
-  const int p1 = lrspline->order(0);
-  const int p2 = lrspline->order(1);
+  const int p1 = lrspline->min_order(0);
+  const int p2 = lrspline->min_order(1);
 
   // Get Gaussian quadrature point coordinates
   const int ng1 = p1 - m;
@@ -476,7 +476,7 @@ bool ASMu2D::edgeL2projection (const DirichletEdge& edge,
   }
 
   // Get Gaussian quadrature points and weights
-  const int nGP = this->getNoGaussPt(lrspline->order(t2-1),true);
+  const int nGP = this->getNoGaussPt(lrspline->min_order(t2-1),true);
   const double* xg = GaussQuadrature::getCoord(nGP);
   const double* wg = GaussQuadrature::getWeight(nGP);
   if (!xg || !wg) return false;

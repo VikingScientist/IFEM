@@ -94,7 +94,7 @@ bool ASMu2Dnurbs::evaluateBasis (int iel, FiniteElement& fe,
 #endif
   }
   else {
-    int p = lrspline->order(0)*lrspline->order(1);
+    int p = lrspline->min_order(0)*lrspline->min_order(1);
 
     Vector B(p);
     Vector Bu(p); // Bezier basis functions differentiated wrt u
@@ -270,7 +270,7 @@ void ASMu2Dnurbs::computeBasis (double u, double v,
   const LR::Element* el = lrspline->getElement(iel);
 
   Go::BasisDerivsSf3 tmp;
-  lrspline->computeBasis(u,v,tmp,iel);
+  // lrspline->computeBasis(u,v,tmp,iel);
   Vector w; w.reserve(tmp.basisValues.size());
   for (const LR::Basisfunction* func : el->support())
     w.push_back(func->cp(func->dim()-1));

@@ -450,7 +450,7 @@ bool ASMu2D::evaluateBasis (int iel, FiniteElement& fe, int derivs) const
     Nv = bezier_v.computeBasisValues(fe.eta,derivs);
   }
 
-  Vector B(lrspline->order(0)*lrspline->order(1)); // Bezier basis functions
+  Vector B(el->order(0)*el->order(1)); // Bezier basis functions
   const Matrix& C = bezierExtract[iel];
 
   ++derivs;
@@ -1036,48 +1036,49 @@ bool ASMu2D::integrate (Integrand& integrand,
   bool use2ndDer = integrand.getIntegrandType() & Integrand::SECOND_DERIVATIVES;
   bool use3rdDer = integrand.getIntegrandType() & Integrand::THIRD_DERIVATIVES;
 
-  const int p1 = lrspline->order(0);
-  const int p2 = lrspline->order(1);
-
-  // Get Gaussian quadrature points and weights
-  const int nGP = this->getNoGaussPt(p1 > p2 ? p1 : p2);
-  const double* xg = GaussQuadrature::getCoord(nGP);
-  const double* wg = GaussQuadrature::getWeight(nGP);
-  if (!xg || !wg) return false;
-
-  // Get the reduced integration quadrature points, if needed
-  const double* xr = nullptr;
-  const double* wr = nullptr;
-  int nRed = integrand.getReducedIntegration(nGP);
-  if (nRed > 0)
-  {
-    xr = GaussQuadrature::getCoord(nRed);
-    wr = GaussQuadrature::getWeight(nRed);
-    if (!xr || !wr) return false;
-  }
-  else if (nRed < 0)
-    nRed = nGP; // The integrand needs to know nGauss
-
-  // Evaluate basis function values and derivatives at all integration points.
-  // We do this before the integration point loop to exploit multi-threading
-  // in the integrand evaluations, which may be the computational bottleneck.
-
   std::vector<Go::BasisDerivsSf>  spline1, splineRed;
   std::vector<Go::BasisDerivsSf2> spline2;
   std::vector<Go::BasisDerivsSf3> spline3;
 
-  if (use3rdDer)
-    spline3.resize(nel*nGP*nGP);
-  else if (use2ndDer)
-    spline2.resize(nel*nGP*nGP);
-  else
-    spline1.resize(nel*nGP*nGP);
-  if (xr)
-    splineRed.resize(nel*nRed*nRed);
-
   size_t iel, jp, rp;
   for (iel = jp = rp = 0; iel < nel; iel++)
   {
+    const int p1 = lrspline->getElement(iel)->order(0);
+    const int p2 = lrspline->getElement(iel)->order(1);
+
+    // Get Gaussian quadrature points and weights
+    const int nGP = this->getNoGaussPt(p1 > p2 ? p1 : p2);
+    const double* xg = GaussQuadrature::getCoord(nGP);
+    const double* wg = GaussQuadrature::getWeight(nGP);
+    if (!xg || !wg) return false;
+
+    // Get the reduced integration quadrature points, if needed
+    const double* xr = nullptr;
+    const double* wr = nullptr;
+    int nRed = integrand.getReducedIntegration(nGP);
+    if (nRed > 0)
+    {
+      xr = GaussQuadrature::getCoord(nRed);
+      wr = GaussQuadrature::getWeight(nRed);
+      if (!xr || !wr) return false;
+    }
+    else if (nRed < 0)
+      nRed = nGP; // The integrand needs to know nGauss
+
+    // Evaluate basis function values and derivatives at all integration points.
+    // We do this before the integration point loop to exploit multi-threading
+    // in the integrand evaluations, which may be the computational bottleneck.
+
+
+    if (use3rdDer)
+      spline3.resize(nel*nGP*nGP);
+    else if (use2ndDer)
+      spline2.resize(nel*nGP*nGP);
+    else
+      spline1.resize(nel*nGP*nGP);
+    if (xr)
+      splineRed.resize(nel*nRed*nRed);
+
     RealArray u, v;
     this->getGaussPointParameters(u,0,nGP,1+iel,xg);
     this->getGaussPointParameters(v,1,nGP,1+iel,xg);
@@ -1122,6 +1123,24 @@ bool ASMu2D::integrate (Integrand& integrand,
 #endif
 
       FiniteElement fe;
+      const int p1 = lrspline->getElement(iel)->order(0);
+      const int p2 = lrspline->getElement(iel)->order(1);
+      const int nGP = this->getNoGaussPt(p1 > p2 ? p1 : p2);
+      const double* xg = GaussQuadrature::getCoord(nGP);
+      const double* wg = GaussQuadrature::getWeight(nGP);
+
+      // Get the reduced integration quadrature points, if needed
+      const double* xr = nullptr;
+      const double* wr = nullptr;
+      int nRed = integrand.getReducedIntegration(nGP);
+      if (nRed > 0)
+      {
+        xr = GaussQuadrature::getCoord(nRed);
+        wr = GaussQuadrature::getWeight(nRed);
+      }
+      else if (nRed < 0)
+        nRed = nGP; // The integrand needs to know nGauss
+
       fe.iel = MLGE[iel-1];
       fe.p   = p1 - 1;
       fe.q   = p2 - 1;
@@ -1399,8 +1418,8 @@ bool ASMu2D::integrate (Integrand& integrand,
 
       FiniteElement fe;
       fe.iel = MLGE[iel-1];
-      fe.p   = lrspline->order(0) - 1;
-      fe.q   = lrspline->order(1) - 1;
+      fe.p   = lrspline->getElement(iel-1)->order(0) - 1;
+      fe.q   = lrspline->getElement(iel-1)->order(1) - 1;
       Matrix   dNdu, Xnod, Jac;
       Matrix3D d2Ndu2, Hess;
       Vec4     X;
@@ -1529,57 +1548,57 @@ bool ASMu2D::integrate (Integrand& integrand, int lIndex,
 
   PROFILE2("ASMu2D::integrate(B)");
 
-  const int p1 = lrspline->order(0);
-  const int p2 = lrspline->order(1);
-
-  // Get Gaussian quadrature points and weights
-  int nG1 = this->getNoGaussPt(lIndex%10 < 3 ? p2 : p1, true);
-  int nGP = integrand.getBouIntegrationPoints(nG1);
-  const double* xg = GaussQuadrature::getCoord(nGP);
-  const double* wg = GaussQuadrature::getWeight(nGP);
-  if (!xg || !wg) return false;
-
-  // Find the parametric direction of the edge normal {-2,-1, 1, 2}
-  const int edgeDir = (lIndex%10+1)/((lIndex%2) ? -2 : 2);
-
-  const int t1 = abs(edgeDir);   // Tangent direction normal to the patch edge
-  const int t2 = 3-abs(edgeDir); // Tangent direction along the patch edge
-
-  std::array<Vector,2> gpar;
-  for (int d = 0; d < 2; d++)
-    if (-1-d == edgeDir)
-    {
-      gpar[d].resize(nGP);
-      gpar[d].fill(d == 0 ? lrspline->startparam(0) : lrspline->startparam(1));
-    }
-    else if (1+d == edgeDir)
-    {
-      gpar[d].resize(nGP);
-      gpar[d].fill(d == 0 ? lrspline->endparam(0) : lrspline->endparam(1));
-    }
-
-  // Extract the Neumann order flag (1 or higher) for the integrand
-  integrand.setNeumannOrder(1 + lIndex/10);
-
-  std::map<char,size_t>::const_iterator iit = firstBp.find(lIndex%10);
-  size_t firstp = iit == firstBp.end() ? 0 : iit->second;
-
-  FiniteElement fe;
-  fe.p  = p1 - 1;
-  fe.q  = p2 - 1;
-  fe.xi = fe.eta = edgeDir < 0 ? -1.0 : 1.0;
-  double param[3] = { 0.0, 0.0, 0.0 };
-
-  Matrix dNdu, Xnod, Jac;
-  Vec4   X(param);
-  Vec3   normal;
-
-
   // === Assembly loop over all elements on the patch edge =====================
 
   int iel = 0;
   for (const LR::Element* el : lrspline->getAllElements())
   {
+
+    const int p1 = el->order(0);
+    const int p2 = el->order(1);
+
+    // Get Gaussian quadrature points and weights
+    int nG1 = this->getNoGaussPt(lIndex%10 < 3 ? p2 : p1, true);
+    int nGP = integrand.getBouIntegrationPoints(nG1);
+    const double* xg = GaussQuadrature::getCoord(nGP);
+    const double* wg = GaussQuadrature::getWeight(nGP);
+    if (!xg || !wg) return false;
+
+    // Find the parametric direction of the edge normal {-2,-1, 1, 2}
+    const int edgeDir = (lIndex%10+1)/((lIndex%2) ? -2 : 2);
+
+    const int t1 = abs(edgeDir);   // Tangent direction normal to the patch edge
+    const int t2 = 3-abs(edgeDir); // Tangent direction along the patch edge
+
+    std::array<Vector,2> gpar;
+    for (int d = 0; d < 2; d++)
+      if (-1-d == edgeDir)
+      {
+        gpar[d].resize(nGP);
+        gpar[d].fill(d == 0 ? lrspline->startparam(0) : lrspline->startparam(1));
+      }
+      else if (1+d == edgeDir)
+      {
+        gpar[d].resize(nGP);
+        gpar[d].fill(d == 0 ? lrspline->endparam(0) : lrspline->endparam(1));
+      }
+
+    // Extract the Neumann order flag (1 or higher) for the integrand
+    integrand.setNeumannOrder(1 + lIndex/10);
+
+    std::map<char,size_t>::const_iterator iit = firstBp.find(lIndex%10);
+    size_t firstp = iit == firstBp.end() ? 0 : iit->second;
+
+    FiniteElement fe;
+    fe.p  = p1 - 1;
+    fe.q  = p2 - 1;
+    fe.xi = fe.eta = edgeDir < 0 ? -1.0 : 1.0;
+    double param[3] = { 0.0, 0.0, 0.0 };
+
+    Matrix dNdu, Xnod, Jac;
+    Vec4   X(param);
+    Vec3   normal;
+
     if (!myElms.empty() && !glInt.threadSafe() &&
         std::find(myElms.begin(), myElms.end(), iel) == myElms.end()) {
         ++iel;
@@ -2001,14 +2020,6 @@ bool ASMu2D::evalSolution (Matrix& sField, const Vector& locSol,
     return false;
 
   FiniteElement fe;
-  fe.p = lrspline->order(0) - 1;
-  fe.q = lrspline->order(1) - 1;
-  Vector   ptSol;
-  Matrix   dNdu, dNdX, Jac, Xnod, eSol, ptDer;
-  Matrix3D d2Ndu2, d2NdX2, Hess, ptDer2;
-
-  Go::BasisDerivsSf2 spline2;
-  int lel = -1;
 
   // Evaluate the primary solution field at each point
   sField.resize(nComp,nPoints);
@@ -2019,6 +2030,16 @@ bool ASMu2D::evalSolution (Matrix& sField, const Vector& locSol,
     fe.u = gpar[0][i];
     fe.v = gpar[1][i];
     int iel = lrspline->getElementContaining(fe.u,fe.v);
+
+    fe.p = lrspline->getElement(iel)->order(0) - 1;
+    fe.q = lrspline->getElement(iel)->order(1) - 1;
+    Vector   ptSol;
+    Matrix   dNdu, dNdX, Jac, Xnod, eSol, ptDer;
+    Matrix3D d2Ndu2, d2NdX2, Hess, ptDer2;
+
+    Go::BasisDerivsSf2 spline2;
+    int lel = -1;
+
 
     if (iel != lel && deriv == 2)
     {
@@ -2181,23 +2202,6 @@ bool ASMu2D::evalSolution (Matrix& sField, const IntegrandBase& integrand,
   bool use3rdDer = integrand.getIntegrandType() & Integrand::THIRD_DERIVATIVES;
 
   FiniteElement fe(0,firstIp);
-  fe.p = lrspline->order(0) - 1;
-  fe.q = lrspline->order(1) - 1;
-  Vector   solPt;
-  Matrix   dNdu, Jac, Xnod;
-  Matrix3D d2Ndu2, Hess;
-  Matrix4D d3Ndu3;
-
-  if (integrand.getIntegrandType() & Integrand::UPDATED_NODES)
-  {
-    // Calculate updated control point coordinates for the entire patch,
-    // stored as the second primary solution vector in the integrand object
-    // while the first vector being the current total displacement vector
-    this->getNodalCoordinates(Xnod);
-    Vectors& eV = const_cast<IntegrandBase&>(integrand).getSolutions();
-    if (!this->deformedConfig(Xnod,eV,true))
-      return false;
-  }
 
   // Evaluate the secondary solution field at each point
   int lel = -1;
@@ -2208,6 +2212,24 @@ bool ASMu2D::evalSolution (Matrix& sField, const IntegrandBase& integrand,
     fe.u = gpar[0][i];
     fe.v = gpar[1][i];
     int iel = lrspline->getElementContaining(fe.u,fe.v);
+
+    fe.p = lrspline->getElement(iel)->order(0) - 1;
+    fe.q = lrspline->getElement(iel)->order(1) - 1;
+    Vector   solPt;
+    Matrix   dNdu, Jac, Xnod;
+    Matrix3D d2Ndu2, Hess;
+    Matrix4D d3Ndu3;
+
+    if (integrand.getIntegrandType() & Integrand::UPDATED_NODES)
+    {
+      // Calculate updated control point coordinates for the entire patch,
+      // stored as the second primary solution vector in the integrand object
+      // while the first vector being the current total displacement vector
+      this->getNodalCoordinates(Xnod);
+      Vectors& eV = const_cast<IntegrandBase&>(integrand).getSolutions();
+      if (!this->deformedConfig(Xnod,eV,true))
+        return false;
+    }
 
     // Evaluate the basis functions at current parametric point
     if (use3rdDer)
@@ -2318,8 +2340,8 @@ void ASMu2D::getBoundaryNodes (int lIndex, IntVec& nodes, int basis,
 
 bool ASMu2D::getOrder (int& p1, int& p2, int& p3) const
 {
-  p1 = geo->order(0);
-  p2 = geo->order(1);
+  p1 = geo->min_order(0);
+  p2 = geo->min_order(1);
   p3 = 0;
 
   return true;
@@ -2649,14 +2671,14 @@ ASMu2D::InterfaceChecker::InterfaceChecker (const ASMu2D& pch) : myPatch(pch)
       if (m->is_spanning_u()) {
         if (el1 > -1 && el2 > -1) {
           intersections[el2*16 + 3].continuity =
-          intersections[el1*16 + 4].continuity = lr->order(1)-m->multiplicity_-1;
+          intersections[el1*16 + 4].continuity = m->continuity();
           intersections[el2*16 + 3].pts.push_back(isectpts[i+1]);
           intersections[el1*16 + 4].pts.push_back(isectpts[i+1]);
         }
       } else {
         if (el1 > -1 && el2 > -1) {
           intersections[el2*16 + 1].continuity =
-          intersections[el1*16 + 2].continuity = lr->order(0)-m->multiplicity_-1;
+          intersections[el1*16 + 2].continuity = m->continuity();
           intersections[el2*16 + 1].pts.push_back(isectpts[i+1]);
           intersections[el1*16 + 2].pts.push_back(isectpts[i+1]);
         }
@@ -2720,11 +2742,11 @@ bool ASMu2D::refine (const LR::RefineData& prm, Vectors& sol)
     if (line->span_u_line_)
       projBasis->insert_const_v_edge(line->const_par_,
                                      line->start_, line->stop_,
-                                     line->multiplicity());
+                                     line->continuity());
     else
       projBasis->insert_const_u_edge(line->const_par_,
                                      line->start_, line->stop_,
-                                     line->multiplicity());
+                                     line->continuity());
 
   if (projBasis != lrspline)
     projBasis->generateIDs();
@@ -2738,8 +2760,8 @@ bool ASMu2D::refine (const LR::RefineData& prm, Vectors& sol)
 
 void ASMu2D::generateBezierBasis ()
 {
-  bezier_u = this->getBezierBasis(geo->order(0));
-  bezier_v = this->getBezierBasis(geo->order(1));
+  bezier_u = this->getBezierBasis(geo->min_order(0));
+  bezier_v = this->getBezierBasis(geo->min_order(1));
 }
 
 
@@ -2747,8 +2769,8 @@ void ASMu2D::generateBezierExtraction ()
 {
   PROFILE2("Bezier extraction");
 
-  const int p1 = geo->order(0);
-  const int p2 = geo->order(1);
+  const int p1 = geo->min_order(0);
+  const int p2 = geo->min_order(1);
 
   myBezierExtract.resize(nel);
   RealArray extrMat;
@@ -2801,7 +2823,7 @@ void ASMu2D::computeBasis (double u, double v, Go::BasisDerivsSf3& bas,
 {
   PROFILE3("ASMu2D::compBasis(3)");
 
-  lrspline->computeBasis(u,v,bas,iel);
+  // lrspline->computeBasis(u,v,bas,iel);
 }
 
 

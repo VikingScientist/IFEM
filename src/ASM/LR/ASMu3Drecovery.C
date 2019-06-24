@@ -108,9 +108,9 @@ bool ASMu3D::assembleL2matrices (SparseMatrix& A, StdVector& B,
 {
   const size_t nnod = this->getNoNodes();
 
-  const int p1 = lrspline->order(0);
-  const int p2 = lrspline->order(1);
-  const int p3 = lrspline->order(2);
+  const int p1 = lrspline->min_order(0);
+  const int p2 = lrspline->min_order(1);
+  const int p3 = lrspline->min_order(2);
   const int pm = std::max(std::max(p1,p2),p3);
 
   // Get Gaussian quadrature points
@@ -236,9 +236,9 @@ LR::LRSplineVolume* ASMu3D::scRecovery (const IntegrandBase& integrand) const
   PROFILE2("ASMu3D::scRecovery");
 
   const int m = integrand.derivativeOrder();
-  const int p1 = lrspline->order(0);
-  const int p2 = lrspline->order(1);
-  const int p3 = lrspline->order(2);
+  const int p1 = lrspline->min_order(0);
+  const int p2 = lrspline->min_order(1);
+  const int p3 = lrspline->min_order(2);
 
   // Get Gaussian quadrature point coordinates
   const int ng1 = p1 - m;
@@ -486,7 +486,7 @@ bool ASMu3D::faceL2projection (const DirichletFace& face,
 
   // Get Gaussian quadrature points and weights
   // Use the largest polynomial order of the two tangent directions
-  const int pmax = std::max(lrspline->order(t1-1),lrspline->order(t2-1));
+  const int pmax = std::max(lrspline->min_order(t1-1),lrspline->min_order(t2-1));
   const int nGP  = this->getNoGaussPt(pmax,true);
   const double* xg = GaussQuadrature::getCoord(nGP);
   const double* wg = GaussQuadrature::getWeight(nGP);

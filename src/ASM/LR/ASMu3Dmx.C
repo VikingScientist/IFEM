@@ -217,8 +217,8 @@ bool ASMu3Dmx::generateFEMTopology ()
   for (auto& it : m_basis) {
     std::cout << "Basis " << ++nbasis << ":\n";
     std::cout <<"numCoefs: "<< it->nBasisFunctions();
-    std::cout <<"\norder: "<< it->order(0) <<" "<<
-                              it->order(1) <<" "<< it->order(2) << std::endl;
+    std::cout <<"\norder: "<< it->min_order(0) <<" "<<
+                              it->min_order(1) <<" "<< it->min_order(2) << std::endl;
   }
 #endif
 
@@ -265,9 +265,9 @@ bool ASMu3Dmx::generateFEMTopology ()
     for (int iel = 0; iel < this->getBasis(b)->nElements(); iel++, ++eit)
     {
       PROFILE("Bezier extraction");
-      int p1 = this->getBasis(b)->order(0);
-      int p2 = this->getBasis(b)->order(1);
-      int p3 = this->getBasis(b)->order(2);
+      int p1 = this->getBasis(b)->min_order(0);
+      int p2 = this->getBasis(b)->min_order(1);
+      int p3 = this->getBasis(b)->min_order(2);
 
       // Get bezier extraction matrix
       RealArray extrMat;
@@ -308,9 +308,9 @@ bool ASMu3Dmx::integrate (Integrand& integrand,
   std::vector<Matrix> BdNdw(m_basis.size());
   for (size_t b = 1; b <= m_basis.size(); ++b) {
     const LR::LRSplineVolume* lrspline = this->getBasis(b);
-    int p1 = lrspline->order(0);
-    int p2 = lrspline->order(1);
-    int p3 = lrspline->order(2);
+    int p1 = lrspline->min_order(0);
+    int p2 = lrspline->min_order(1);
+    int p3 = lrspline->min_order(2);
     Go::BsplineBasis basis1 = getBezierBasis(p1);
     Go::BsplineBasis basis2 = getBezierBasis(p2);
     Go::BsplineBasis basis3 = getBezierBasis(p3);
@@ -929,18 +929,18 @@ bool ASMu3Dmx::refine (const LR::RefineData& prm, Vectors& sol)
         if (refBasis == m_basis[j])
           continue;
         else {
-          int p = m_basis[j]->order(rect->constDirection());
-          int mult = 1;
+          int p = m_basis[j]->min_order(rect->constDirection());
+          int cont = 0;
           if (ASMmxBase::Type == ASMmxBase::REDUCED_CONT_RAISE_BASIS1 ||
               ASMmxBase::Type == ASMmxBase::REDUCED_CONT_RAISE_BASIS2) {
-            if (rect->multiplicity_ > 1)
-              mult = p;
+            if (rect->continuity() > 0)
+              cont = 0;
             else
-              mult = (j == 0 && ASMmxBase::Type == REDUCED_CONT_RAISE_BASIS1) ||
+              cont = (j == 0 && ASMmxBase::Type == REDUCED_CONT_RAISE_BASIS1) ||
                      (j == 1 && ASMmxBase::Type == REDUCED_CONT_RAISE_BASIS2) ? 2 : 1;
           }
           LR::MeshRectangle* newRect = rect->copy();
-          newRect->multiplicity_ = mult;
+          newRect->continuity_ = cont;
 
           m_basis[j]->insert_line(newRect);
         }

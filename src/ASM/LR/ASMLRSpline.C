@@ -223,12 +223,11 @@ bool ASMLRSpline::doRefine (const LR::RefineData& prm, LR::LRSpline* lrspline)
     return doRefine;
 
   double beta         = prm.options.size() > 0 ? prm.options[0]/100.0 : 0.10;
-  int    multiplicity = prm.options.size() > 1 ? prm.options[1]       : 1;
-  if (multiplicity > 1)
-    for (int d = 0; d < lrspline->nVariate(); d++) {
-      int p = lrspline->order(d) - 1;
-      if (multiplicity > p) multiplicity = p;
-    }
+  int    continuity   = prm.options.size() > 1 ? prm.options[1]       : lrspline->min_order(0)-1;
+  for (int d = 0; d < lrspline->nVariate(); d++) {
+    int p = lrspline->min_order(d) - 1;
+    if (continuity > p-1) continuity = p-1;
+  }
 
   enum refinementStrategy strat = LR_FULLSPAN;
   if (prm.options.size() > 2)
@@ -247,7 +246,7 @@ bool ASMLRSpline::doRefine (const LR::RefineData& prm, LR::LRSpline* lrspline)
   if (maxAspectRatio > 0)
     lrspline->setMaxAspectRatio((double)maxAspectRatio);
   lrspline->setCloseGaps(closeGaps);
-  lrspline->setRefMultiplicity(multiplicity);
+  lrspline->setRefContinuity(continuity);
   lrspline->setRefStrat(strat);
 
   // do actual refinement

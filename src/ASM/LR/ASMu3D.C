@@ -224,9 +224,9 @@ bool ASMu3D::generateFEMTopology ()
 
   if (shareFE) return true;
 
-  const int p1 = lrspline->order(0);
-  const int p2 = lrspline->order(1);
-  const int p3 = lrspline->order(2);
+  const int p1 = lrspline->min_order(0);
+  const int p2 = lrspline->min_order(1);
+  const int p3 = lrspline->min_order(2);
 
   myMLGN.resize(nnod);
   myMLGE.resize(nel);
@@ -839,9 +839,9 @@ bool ASMu3D::integrate (Integrand& integrand,
 
   PROFILE2("ASMu3D::integrate(I)");
 
-  int p1 = lrspline->order(0);
-  int p2 = lrspline->order(1);
-  int p3 = lrspline->order(2);
+  int p1 = lrspline->min_order(0);
+  int p2 = lrspline->min_order(1);
+  int p3 = lrspline->min_order(2);
   int pm = std::max(std::max(p1,p2),p3);
 
   // Get Gaussian quadrature points and weights
@@ -1169,7 +1169,7 @@ bool ASMu3D::integrate (Integrand& integrand, int lIndex,
 
   // Get Gaussian quadrature points and weights
   // Use the largest polynomial order of the two tangent directions
-  const int pmax = std::max(lrspline->order(t1-1),lrspline->order(t2-1));
+  const int pmax = std::max(lrspline->min_order(t1-1),lrspline->min_order(t2-1));
   const int nG1 = this->getNoGaussPt(pmax,true);
   const int nGP = integrand.getBouIntegrationPoints(nG1);
   const double* xg = GaussQuadrature::getCoord(nGP);
@@ -1215,9 +1215,9 @@ bool ASMu3D::integrate (Integrand& integrand, int lIndex,
 
     FiniteElement fe;
     fe.iel = MLGE[iEl];
-    fe.p   = lrspline->order(0) - 1;
-    fe.q   = lrspline->order(1) - 1;
-    fe.r   = lrspline->order(2) - 1;
+    fe.p   = lrspline->min_order(0) - 1;
+    fe.q   = lrspline->min_order(1) - 1;
+    fe.r   = lrspline->min_order(2) - 1;
 
     // Compute parameter values of the Gauss points over the whole element
     std::array<Vector,3> gpar;
@@ -1688,9 +1688,9 @@ bool ASMu3D::evalSolution (Matrix& sField, const IntegrandBase& integrand,
   Matrix   dNdu, Jac, Xnod;
   Matrix3D d2Ndu2, Hess;
 
-  const int p1 = lrspline->order(0);
-  const int p2 = lrspline->order(1);
-  const int p3 = lrspline->order(2);
+  const int p1 = lrspline->min_order(0);
+  const int p2 = lrspline->min_order(1);
+  const int p3 = lrspline->min_order(2);
   Matrix B(p1*p2*p3, 4); // Bezier evaluation points and derivatives
 
   // Evaluate the secondary solution field at each point
@@ -1832,9 +1832,9 @@ void ASMu3D::getBoundaryNodes (int lIndex, IntVec& nodes, int basis,
 
 bool ASMu3D::getOrder (int& p1, int& p2, int& p3) const
 {
-  p1 = geo->order(0);
-  p2 = geo->order(1);
-  p3 = geo->order(2);
+  p1 = geo->min_order(0);
+  p2 = geo->min_order(1);
+  p3 = geo->min_order(2);
 
   return true;
 }
@@ -2279,9 +2279,9 @@ void ASMu3D::getElmConnectivities (IntMat& neigh) const
   for (const LR::Element* m : lr->getAllElements()) {
     int gEl = MLGE[m->getId()]-1;
     for (auto edge : {LR::WEST, LR::EAST, LR::SOUTH, LR::NORTH, LR::BOTTOM, LR::TOP}) {
-      std::set<int> elms = lr->getElementNeighbours(m->getId(), edge);
-      for (int elm : elms)
-        neigh[gEl].push_back(MLGE[elm]-1);
+      // std::set<int> elms = lr->getElementNeighbours(m->getId(), edge);
+      // for (int elm : elms)
+        // neigh[gEl].push_back(MLGE[elm]-1);
     }
   }
 }

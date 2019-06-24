@@ -233,7 +233,7 @@ bool ASMu2Dmx::generateFEMTopology ()
 #ifdef SP_DEBUG
     std::cout <<"Basis "<< nb.size()
               <<":\nnumCoefs: "<< nb.back()
-              <<"\norder: "<< it->order(0) <<" "<< it->order(1) << std::endl;
+              <<"\norder: "<< it->min_order(0) <<" "<< it->min_order(1) << std::endl;
 #endif
   }
 
@@ -998,22 +998,22 @@ bool ASMu2Dmx::refine (const LR::RefineData& prm, Vectors& sol)
         if (refBasis == m_basis[j])
           continue;
         else {
-          int mult = 1;
+          int cont = 0;
           if (ASMmxBase::Type == ASMmxBase::REDUCED_CONT_RAISE_BASIS1 ||
               ASMmxBase::Type == ASMmxBase::REDUCED_CONT_RAISE_BASIS2) {
-            if (line->multiplicity_ > 1)
-              mult = line->multiplicity_;
+            if (line->continuity() > 1)
+              cont = line->continuity();
             else
-              mult = (j == 0 && ASMmxBase::Type == REDUCED_CONT_RAISE_BASIS1) ||
+              cont = (j == 0 && ASMmxBase::Type == REDUCED_CONT_RAISE_BASIS1) ||
                      (j == 1 && ASMmxBase::Type == REDUCED_CONT_RAISE_BASIS2) ? 2 : 1;
           }
 
           if (line->span_u_line_)
             m_basis[j]->insert_const_v_edge(line->const_par_,
-                                            line->start_, line->stop_, mult);
+                                            line->start_, line->stop_, cont);
           else
             m_basis[j]->insert_const_u_edge(line->const_par_,
-                                            line->start_, line->stop_, mult);
+                                            line->start_, line->stop_, cont);
         }
 
     // Uniformly refine to find basis 1
@@ -1089,9 +1089,9 @@ void ASMu2Dmx::generateThreadGroups (const Integrand& integrand, bool silence,
   // TODO: Support for div-compatible
   int p1 = 0;
   for (size_t i = 1; i <= m_basis.size(); ++i)
-    if (this->getBasis(i)->order(0) > p1) {
+    if (this->getBasis(i)->min_order(0) > p1) {
       threadBasis = this->getBasis(i);
-      p1 = threadBasis->order(0);
+      p1 = threadBasis->min_order(0);
     }
 
   LR::generateThreadGroups(threadGroups,threadBasis);

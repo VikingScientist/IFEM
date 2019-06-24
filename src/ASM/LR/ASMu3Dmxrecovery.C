@@ -50,9 +50,9 @@ bool ASMu3Dmx::assembleL2matrices (SparseMatrix& A, StdVector& B,
                                    const IntegrandBase& integrand,
                                    bool continuous) const
 {
-  const int p1 = projBasis->order(0);
-  const int p2 = projBasis->order(1);
-  const int p3 = projBasis->order(2);
+  const int p1 = projBasis->min_order(0);
+  const int p2 = projBasis->min_order(1);
+  const int p3 = projBasis->min_order(2);
 
   // Get Gaussian quadrature points
   const int ng1 = continuous ? nGauss : p1 - 1;
