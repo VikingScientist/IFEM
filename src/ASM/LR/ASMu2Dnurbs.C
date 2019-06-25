@@ -61,10 +61,12 @@ bool ASMu2Dnurbs::evaluateBasis (int iel, FiniteElement& fe,
   fe.xi  = 2.0*(fe.u - el->umin()) / (el->umax() - el->umin()) - 1.0;
   fe.eta = 2.0*(fe.v - el->vmin()) / (el->vmax() - el->vmin()) - 1.0;
   RealArray Nu, Nv;
+  int p = el->order(0);
+  int q = el->order(1);
 #pragma omp critical
   {
-    Nu = bezier_u.computeBasisValues(fe.xi, derivs);
-    Nv = bezier_v.computeBasisValues(fe.eta,derivs);
+    Nu = bezier_u[p].computeBasisValues(fe.xi, derivs);
+    Nv = bezier_v[q].computeBasisValues(fe.eta,derivs);
   }
   const Matrix& C = bezierExtract[iel];
 

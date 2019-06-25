@@ -279,7 +279,7 @@ bool ASMu2Dmx::generateFEMTopology ()
 #endif
 
   geo = m_basis[geoBasis-1].get();
-  this->generateBezierBasis();
+  this->generateBezierBasis(lrspline->max_order(0), lrspline->max_order(1));
   this->generateBezierExtraction();
 
   return true;

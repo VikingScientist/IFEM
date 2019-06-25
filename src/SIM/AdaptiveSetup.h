@@ -111,7 +111,8 @@ private:
   //! \brief Enum defining available refinement scheme options.
   enum RefScheme { FULLSPAN=0, MINSPAN=1,
                    ISOTROPIC_FUNCTION=2,
-                   ISOTROPIC_ELEMENT=3 };
+                   ISOTROPIC_ELEMENT=3,
+                   LOCAL_DEGREE_ELEVATION=4 };
 
   Threshold   threshold; //!< Flag for how to interpret the parameter \a beta
   RefScheme   scheme;    //!< The actual refinement scheme to use

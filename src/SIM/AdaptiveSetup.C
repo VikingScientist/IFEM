@@ -73,7 +73,7 @@ bool AdaptiveSetup::parse (const TiXmlElement* elem)
     }
     else if (!strcasecmp(child->Value(),"store_eps_mesh")) {
       mshPrefix = "mesh";
-      storeMesh = 30; // all postscript mesh files and lr-files
+      storeMesh = 3; // all postscript mesh files and lr-files
     }
     else if ((value = utl::getValue(child,"store_errors")))
       errPrefix = value;
@@ -88,6 +88,8 @@ bool AdaptiveSetup::parse (const TiXmlElement* elem)
         scheme = MINSPAN;
       else if (!strcasecmp(value,"isotropic_function"))
         scheme = ISOTROPIC_FUNCTION;
+      else if (!strcasecmp(value,"local_degree_elevation"))
+        scheme = LOCAL_DEGREE_ELEVATION;
       else
         std::cerr <<"  ** AdaptiveSetup::parse: Unknown refinement scheme \""
                   << value <<"\" (ignored)"<< std::endl;
@@ -260,7 +262,7 @@ int AdaptiveSetup::calcRefinement (LR::RefineData& prm, int iStep,
     return 0; // Condition number limit reached
   }
 
-  prm.options.reserve(8);
+  prm.options.reserve(9);
   prm.options.push_back(beta);
   prm.options.push_back(knot_mult);
   prm.options.push_back(scheme);
@@ -269,6 +271,7 @@ int AdaptiveSetup::calcRefinement (LR::RefineData& prm, int iStep,
   prm.options.push_back(floor(maxAspect));
   prm.options.push_back(closeGaps);
   prm.options.push_back(threshold == TRUE_BETA ? 1 : 0);
+  prm.options.push_back(iStep);
 
   if (threshold == TRUE_BETA)
   {
@@ -289,7 +292,7 @@ int AdaptiveSetup::calcRefinement (LR::RefineData& prm, int iStep,
   size_t i, refineSize;
   std::vector<DblIdx> error;
 
-  if (scheme == ISOTROPIC_FUNCTION) // use errors per function
+  if (scheme == ISOTROPIC_FUNCTION || scheme == LOCAL_DEGREE_ELEVATION) // use errors per function
   {
     if (thePatch->getNoRefineNodes() == thePatch->getNoNodes(1))
       error.resize(model.getNoNodes(),DblIdx(0.0,0));

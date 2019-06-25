@@ -625,7 +625,7 @@ protected:
   virtual LR::LRSplineSurface* createLRfromTensor();
 
   //! \brief Generate bezier basis.
-  void generateBezierBasis();
+  void generateBezierBasis(int p, int q);
 
   //! \brief Generate bezier extraction operators.
   void generateBezierExtraction();
@@ -658,8 +658,8 @@ protected:
   const Matrices& bezierExtract; //!< Bezier extraction matrices
   Matrices      myBezierExtract; //!< Bezier extraction matrices
 
-  Go::BsplineBasis bezier_u; //!< Bezier basis in the u-direction
-  Go::BsplineBasis bezier_v; //!< Bezier basis in the v-direction
+  std::vector<Go::BsplineBasis> bezier_u; //!< Bezier basis in the u-direction
+  std::vector<Go::BsplineBasis> bezier_v; //!< Bezier basis in the v-direction
 
 private:
   mutable double aMin; //!< Minimum element area for adaptive refinement

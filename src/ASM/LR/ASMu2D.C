@@ -444,10 +444,12 @@ bool ASMu2D::evaluateBasis (int iel, FiniteElement& fe, int derivs) const
   fe.xi  = 2.0*(fe.u - el->umin()) / (el->umax() - el->umin()) - 1.0;
   fe.eta = 2.0*(fe.v - el->vmin()) / (el->vmax() - el->vmin()) - 1.0;
   RealArray Nu, Nv;
+  int p = el->order(0);
+  int q = el->order(1);
 #pragma omp critical
   {
-    Nu = bezier_u.computeBasisValues(fe.xi, derivs);
-    Nv = bezier_v.computeBasisValues(fe.eta,derivs);
+    Nu = bezier_u[p].computeBasisValues(fe.xi, derivs);
+    Nv = bezier_v[q].computeBasisValues(fe.eta,derivs);
   }
 
   Vector B(el->order(0)*el->order(1)); // Bezier basis functions
@@ -572,7 +574,7 @@ bool ASMu2D::generateFEMTopology ()
   nnod = lrspline->nBasisFunctions();
   nel  = lrspline->nElements();
 
-  this->generateBezierBasis();
+  this->generateBezierBasis(lrspline->max_order(0), lrspline->max_order(1));
 
   if (!MLGN.empty()) {
     if (MLGN.size() != nnod)
@@ -1123,8 +1125,8 @@ bool ASMu2D::integrate (Integrand& integrand,
 #endif
 
       FiniteElement fe;
-      const int p1 = lrspline->getElement(iel)->order(0);
-      const int p2 = lrspline->getElement(iel)->order(1);
+      const int p1 = lrspline->getElement(iel-1)->order(0);
+      const int p2 = lrspline->getElement(iel-1)->order(1);
       const int nGP = this->getNoGaussPt(p1 > p2 ? p1 : p2);
       const double* xg = GaussQuadrature::getCoord(nGP);
       const double* wg = GaussQuadrature::getWeight(nGP);
@@ -2251,12 +2253,8 @@ bool ASMu2D::evalSolution (Matrix& sField, const IntegrandBase& integrand,
       SplineUtils::extractBasis(spline,fe.N,dNdu);
     }
 
-    if (iel != lel)
-    {
-      lel = iel; // Set up control point (nodal) coordinates for current element
-      if (!this->getElementCoordinates(Xnod,iel+1))
-        return false;
-    }
+    if (!this->getElementCoordinates(Xnod,iel+1))
+      return false;
 
     // Compute the Jacobian inverse
     fe.detJxW = utl::Jacobian(Jac,fe.dNdX,Xnod,dNdu);
@@ -2758,10 +2756,12 @@ bool ASMu2D::refine (const LR::RefineData& prm, Vectors& sol)
 }
 
 
-void ASMu2D::generateBezierBasis ()
+void ASMu2D::generateBezierBasis (int p, int q)
 {
-  bezier_u = this->getBezierBasis(geo->min_order(0));
-  bezier_v = this->getBezierBasis(geo->min_order(1));
+  for(int p0=bezier_u.size(); p0<=p; p0++)
+    bezier_u.push_back(this->getBezierBasis(p0));
+  for(int q0=bezier_v.size(); q0<=q; q0++)
+    bezier_v.push_back(this->getBezierBasis(q0));
 }
 
 
@@ -2769,14 +2769,14 @@ void ASMu2D::generateBezierExtraction ()
 {
   PROFILE2("Bezier extraction");
 
-  const int p1 = geo->min_order(0);
-  const int p2 = geo->min_order(1);
 
   myBezierExtract.resize(nel);
   RealArray extrMat;
   int iel = 0;
   for (const LR::Element* elm : geo->getAllElements())
   {
+    const int p1 = elm->order(0);
+    const int p2 = elm->order(1);
     // Get bezier extraction matrix
     geo->getBezierExtraction(iel,extrMat);
     myBezierExtract[iel].resize(elm->nBasisFunctions(),p1*p2);

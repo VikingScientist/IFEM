@@ -239,6 +239,7 @@ bool ASMLRSpline::doRefine (const LR::RefineData& prm, LR::LRSpline* lrspline)
   int  maxTjoints     = prm.options.size() > 4 ? prm.options[4]      : -1;
   int  maxAspectRatio = prm.options.size() > 5 ? prm.options[5]      : -1;
   bool closeGaps      = prm.options.size() > 6 ? prm.options[6] != 0 : false;
+  int  iStep          = prm.options.size() > 8 ? prm.options[8]      : 1;
 
   // set refinement parameters
   if (maxTjoints > 0)
@@ -252,6 +253,24 @@ bool ASMLRSpline::doRefine (const LR::RefineData& prm, LR::LRSpline* lrspline)
   // do actual refinement
   if (doRefine == 'E')
     lrspline->refineByDimensionIncrease(prm.errors,beta);
+  else if (prm.options[2] == 4)
+  {
+    if (iStep%2 == 0)
+    {
+      // only order elevate the hightest-order functions
+      int pmax = 0 ;
+      for(auto i : prm.elements) pmax = std::max(pmax, lrspline->getBasisfunction(i)->getOrder(0));
+      std::vector<int> raise_order_functions;
+      for(auto i : prm.elements)
+        if(lrspline->getBasisfunction(i)->getOrder(0) == pmax)
+          raise_order_functions.push_back(i);
+      lrspline->orderElevateFunction(raise_order_functions);
+    }
+    else
+    {
+      lrspline->refineBasisFunction( prm.elements);
+    }
+  }
   else if (strat == LR_STRUCTURED_MESH)
     lrspline->refineBasisFunction(prm.elements);
   else
@@ -265,6 +284,8 @@ bool ASMLRSpline::doRefine (const LR::RefineData& prm, LR::LRSpline* lrspline)
 
 Go::BsplineBasis ASMLRSpline::getBezierBasis (int p, double start, double end)
 {
+  // should never use p=0 bezier basis anyway, but we sometime need it for convenience indexing
+  if(p==0) p=1;
   double knot[2*p];
   std::fill(knot,   knot+p,   start);
   std::fill(knot+p, knot+2*p, end);
