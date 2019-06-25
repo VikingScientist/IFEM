@@ -250,6 +250,9 @@ bool ASMLRSpline::doRefine (const LR::RefineData& prm, LR::LRSpline* lrspline)
   lrspline->setRefContinuity(continuity);
   lrspline->setRefStrat(strat);
 
+  int pmax = lrspline->max_order(0) ;
+  lrspline->setRefContinuity(pmax-2);
+
   // do actual refinement
   if (doRefine == 'E')
     lrspline->refineByDimensionIncrease(prm.errors,beta);
@@ -258,8 +261,6 @@ bool ASMLRSpline::doRefine (const LR::RefineData& prm, LR::LRSpline* lrspline)
     if (iStep%2 == 0)
     {
       // only order elevate the hightest-order functions
-      int pmax = 0 ;
-      for(auto i : prm.elements) pmax = std::max(pmax, lrspline->getBasisfunction(i)->getOrder(0));
       std::vector<int> raise_order_functions;
       for(auto i : prm.elements)
         if(lrspline->getBasisfunction(i)->getOrder(0) == pmax)
@@ -268,7 +269,7 @@ bool ASMLRSpline::doRefine (const LR::RefineData& prm, LR::LRSpline* lrspline)
     }
     else
     {
-      lrspline->refineBasisFunction( prm.elements);
+      lrspline->refineBasisFunction(prm.elements);
     }
   }
   else if (strat == LR_STRUCTURED_MESH)
